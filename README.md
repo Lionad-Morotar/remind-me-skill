@@ -31,7 +31,7 @@ AI: 已在后台设置提醒任务：
 ## 安装和使用
 
 ```bash
-npx skill lionad-morotar/remind-me-skill
+npx skills add Lionad-Morotar/remind-me-skill
 ```
 
 如果你的 IDE 不支持 SlashCommand，那么为了获得最可靠的结果，需要提示词前加上前缀，比如：
