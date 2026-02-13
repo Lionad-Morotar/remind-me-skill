@@ -34,7 +34,7 @@ AI: 已在后台设置提醒任务：
 
 到时间后弹出系统对话框（强制打断，无法忽略）
 
-<!-- ![TODO](https://user-images.githubusercontent.com/placeholder/remind-dialog.png) -->
+![dialog](./docs/example.png)
 
 ## 安装和使用
 
