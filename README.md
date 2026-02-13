@@ -12,21 +12,29 @@ macOS 后台定时提醒 remind-me-skill，在指定时间通过系统通知打�
 ## 示例
 
 ```
-用户: 5分钟后提醒我 API 限额重置
+用户: 报错了，设置提醒：{
+    "error": {
+      "message": "⚡ 勇士，您的今日冒险体力已耗尽！",
+      "details": {
+        "recovery_time": "2026-02-14T06:32:36+08:00",
+      }
+    },
+    "advice": "💡 小贴士：合理规划冒险路线，避免在Boss战前耗尽体力！"
+  }
 
 AI: 已在后台设置提醒任务：
     - 提醒时间：2026-02-14 06:32:36
-    - 提醒内容：API 限额重置
+    - 提醒内容：冒险体力已恢复！
     
     后台进程 PID: 37802
-    
-    如果您想取消提醒，可以运行：
-    kill 37802
+    如果您想取消提醒，可以运行：kill 37802
 ```
 
-到时间后弹出系统对话框：
+> 💡 **无论扔什么**：冷却时间 / 会议 / 休息 / 烧水 / 外卖 / 任何时间相关的任务，AI 都能接！
 
-![dialog](https://user-images.githubusercontent.com/placeholder/remind-dialog.png)
+到时间后弹出系统对话框（强制打断，无法忽略）
+
+<!-- ![TODO](https://user-images.githubusercontent.com/placeholder/remind-dialog.png) -->
 
 ## 安装和使用
 
