@@ -11,6 +11,10 @@ config_dir="$HOME/.config/remind-me-skill"
 tasks_dir="$config_dir/tasks"
 mkdir -p "$tasks_dir"
 
+# 安装 LaunchAgent（如未安装）
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$script_dir/install_agent.sh" 2>/dev/null || true
+
 # 计算等待秒数
 now=$(date +%s)
 wait_seconds=$((target_epoch - now))
@@ -36,6 +40,7 @@ MESSAGE=$message
 CREATED_AT=$now
 TARGET_AT=$target_epoch
 PID=$pid
+NOTIFIED=false
 EOF
 
 # 返回 PID

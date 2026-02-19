@@ -1,5 +1,5 @@
 #!/bin/bash
-# 清理过期的提醒任务
+# 标记过期的提醒任务（由 wakeup_handler 处理确认）
 
 config_dir="$HOME/.config/remind-me-skill"
 tasks_dir="$config_dir/tasks"
@@ -11,21 +11,22 @@ expired_count=0
 
 for task_file in "$tasks_dir"/*.task; do
   [ -f "$task_file" ] || continue
-  
+
   target_at=$(grep "^TARGET_AT=" "$task_file" 2>/dev/null | cut -d= -f2)
+  notified=$(grep "^NOTIFIED=" "$task_file" 2>/dev/null | cut -d= -f2)
   [ -z "$target_at" ] && continue
-  
-  if [ "$target_at" -lt "$now" ]; then
+
+  # 只处理已过期且未标记为已通知的任务
+  if [ "$target_at" -lt "$now" ] && [ "$notified" = "false" ]; then
     title=$(grep "^TITLE=" "$task_file" | cut -d= -f2-)
     message=$(grep "^MESSAGE=" "$task_file" | cut -d= -f2-)
-    
-    # 显示过期提醒
-    osascript -e "display notification \"$message\" with title \"[已过期] $title\"" 2>/dev/null || true
-    
-    # 删除任务文件
-    rm -f "$task_file"
-    ((expired_count++))
+
+    # 标记为已过期但未确认（NOTIFIED 保持 false，等待唤醒时处理）
+    # 发送通知告知用户有过期提醒待确认
+    osascript -e "display notification \"提醒已过期，唤醒时将弹出确认: $message\" with title \"[待确认] $title\"" 2>/dev/null || true
+
+    expired_count=$((expired_count + 1))
   fi
 done
 
-[ "$expired_count" -gt 0 ] && echo "清理了 $expired_count 个过期任务"
+[ "$expired_count" -gt 0 ] && echo "发现 $expired_count 个过期任务，将在唤醒时弹出确认"
