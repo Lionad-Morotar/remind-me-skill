@@ -1,20 +1,21 @@
 ---
 name: remind-me-skill
-description: 创建后台定时提醒任务，在指定时间通过系统通知打断用户。支持 macOS 和 Windows，支持睡眠/锁屏后唤醒时的过期提醒确认。当用户需要设置定时提醒、倒计时、闹钟或需要在特定时间点（如"5分钟后"、"下午3点"、API限额重置时间等）收到系统通知时使用。
+description: 创建后台定时提醒任务，在指定时间通过系统通知打断用户。支持 macOS、Windows 和 Linux，支持睡眠/锁屏后唤醒时的过期提醒确认。当用户需要设置定时提醒、倒计时、闹钟或需要在特定时间点（如"5分钟后"、"下午3点"、API限额重置时间等）收到系统通知时使用。
 ---
 
 # Remind Me Skill
 
-创建跨平台后台定时提醒，在指定时间弹出系统对话框打断用户。**支持 macOS 和 Windows**，支持电脑从睡眠/锁屏状态唤醒后及时提醒过期通知并获得用户确认。
+创建跨平台后台定时提醒，在指定时间弹出系统对话框打断用户。**支持 macOS、Windows 和 Linux**，支持电脑从睡眠/锁屏状态唤醒后及时提醒过期通知并获得用户确认。
 
 ## 工作流程
 
-1. **检测平台**（macOS 或 Windows）
+1. **检测平台**（macOS、Windows 或 Linux）
 2. **解析用户输入**，提取提醒时间和内容
 3. **计算目标时间戳**（Unix epoch）
 4. **调用平台对应的脚本创建任务**：
    - macOS: `scripts/create_reminder.sh "<标题>" "<内容>" <目标时间戳>`
    - Windows: `scripts/windows/create_reminder.ps1 -Title "<标题>" -Message "<内容>" -TargetEpoch <目标时间戳>`
+   - Linux: `scripts/linux/create_reminder.sh "<标题>" "<内容>" <目标时间戳>`
 5. **返回结果**（必须严格使用以下格式）：
    ```
    已在后台设置提醒任务：
@@ -55,6 +56,13 @@ description: 创建后台定时提醒任务，在指定时间通过系统通知�
    - **否**：推迟30分钟，下次解锁时再次提醒
 3. **关闭处理**：关闭消息框会保持任务，下次解锁时再次提醒
 
+**Linux:**
+1. **登录检测**：通过 systemd user timer 在登录时自动触发检查（每分钟检查一次）
+2. **过期提醒确认**：弹出对话框 `[过期提醒] xxx`（使用 zenity/kdialog），提供两个选项：
+   - **已确认**：删除任务，表示用户已知晓
+   - **稍后（30分钟）**：推迟30分钟，下次登录或定时再次提醒
+3. **对话框工具**：自动检测 zenity（GTK）、kdialog（KDE）或回退到 notify-send
+
 ## 脚本参考
 
 ### macOS
@@ -81,6 +89,19 @@ description: 创建后台定时提醒任务，在指定时间通过系统通知�
 | `scripts/windows/wakeup_handler.ps1` | 解锁/登录时执行，处理过期提醒确认（内部使用）|
 | `scripts/windows/install_agent.ps1` | 安装 Task Scheduler（内部使用）|
 
+### Linux
+
+| 脚本 | 用途 |
+|------|------|
+| `scripts/linux/create_reminder.sh` | 创建提醒任务，自动安装 systemd service（如未安装），返回 PID |
+| `scripts/linux/cancel_task.sh <pid>` | 取消指定任务 |
+| `scripts/linux/list_tasks.sh` | 列出所有在途任务（跳过已过期的）|
+| `scripts/linux/list_tasks.sh --expired` | 列出待确认的过期任务 |
+| `scripts/linux/cleanup_expired.sh` | 标记过期任务，发送通知告知用户登录时将弹出确认 |
+| `scripts/linux/wakeup_handler.sh` | 登录时执行，处理过期提醒确认（内部使用）|
+| `scripts/linux/install_agent.sh` | 安装 systemd user service（内部使用）|
+| `scripts/linux/dialog.sh` | 通用对话框封装，自动检测 zenity/kdialog（内部使用）|
+
 ## 使用示例
 
 **用户**: "5分钟后提醒我 API 限额重置"
@@ -92,6 +113,10 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
     target=$(($(date +%s) + 300))
     pid=$(scripts/create_reminder.sh "API 限额重置" "您的 API 限额已重置" $target)
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # Linux
+    target=$(($(date +%s) + 300))
+    pid=$(scripts/linux/create_reminder.sh "API 限额重置" "您的 API 限额已重置" $target)
 else
     # Windows (Git Bash/Cygwin)
     target=$(($(date +%s) + 300))
@@ -105,6 +130,9 @@ fi
 ```bash
 # macOS
 scripts/list_tasks.sh --expired
+
+# Linux
+scripts/linux/list_tasks.sh --expired
 
 # Windows (PowerShell)
 scripts/windows/list_tasks.ps1 -Expired
@@ -122,6 +150,12 @@ scripts/windows/list_tasks.ps1 -Expired
 - Windows Forms (System.Windows.Forms) 用于显示对话框
 - Task Scheduler 服务用于唤醒检测（自动安装）
 
+### Linux
+- systemd (大多数现代发行版已预装)
+- `zenity` (GTK/GNOME/XFCE) 或 `kdialog` (KDE) 用于显示对话框
+- `notify-send` (libnotify) 用于通知（可选，通常已预装）
+- Bash 和 coreutils
+
 ## 技术说明
 
 ### macOS
@@ -137,3 +171,13 @@ scripts/windows/list_tasks.ps1 -Expired
   - 使用当前用户权限运行，确保安全
   - 自动注册，无需用户手动配置
 - **任务文件位置**: `%USERPROFILE%\.config\remind-me-skill\tasks\`
+
+### Linux
+- **systemd user service**: `remind-me.timer`
+  - 在登录和系统启动后 30 秒触发
+  - 每分钟检查一次过期任务
+  - 使用用户会话权限运行
+  - 自动启用，无需 root 权限
+- **任务文件位置**: `~/.config/remind-me-skill/tasks/`
+- **日志查看**: `journalctl --user -u remind-me.service`
+- **状态检查**: `systemctl --user status remind-me.timer`
