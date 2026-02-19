@@ -1,18 +1,21 @@
 ---
 name: remind-me-skill
-description: 创建 macOS 后台定时提醒任务，在指定时间通过系统通知打断用户。支持睡眠/锁屏后唤醒时的过期提醒确认。当用户需要设置定时提醒、倒计时、闹钟或需要在特定时间点（如"5分钟后"、"下午3点"、API限额重置时间等）收到系统通知时使用。
+description: 创建后台定时提醒任务，在指定时间通过系统通知打断用户。支持 macOS 和 Windows，支持睡眠/锁屏后唤醒时的过期提醒确认。当用户需要设置定时提醒、倒计时、闹钟或需要在特定时间点（如"5分钟后"、"下午3点"、API限额重置时间等）收到系统通知时使用。
 ---
 
 # Remind Me Skill
 
-创建 macOS 后台定时提醒，在指定时间弹出系统对话框打断用户。**新增：支持电脑从睡眠/锁屏状态唤醒后，及时提醒过期通知并获得用户确认。**
+创建跨平台后台定时提醒，在指定时间弹出系统对话框打断用户。**支持 macOS 和 Windows**，支持电脑从睡眠/锁屏状态唤醒后及时提醒过期通知并获得用户确认。
 
 ## 工作流程
 
-1. **解析用户输入**，提取提醒时间和内容
-2. **计算目标时间戳**（Unix epoch）
-3. **调用脚本创建任务**：`scripts/create_reminder.sh "<标题>" "<内容>" <目标时间戳>`
-4. **返回结果**（必须严格使用以下格式）：
+1. **检测平台**（macOS 或 Windows）
+2. **解析用户输入**，提取提醒时间和内容
+3. **计算目标时间戳**（Unix epoch）
+4. **调用平台对应的脚本创建任务**：
+   - macOS: `scripts/create_reminder.sh "<标题>" "<内容>" <目标时间戳>`
+   - Windows: `scripts/windows/create_reminder.ps1 -Title "<标题>" -Message "<内容>" -TargetEpoch <目标时间戳>`
+5. **返回结果**（必须严格使用以下格式）：
    ```
    已在后台设置提醒任务：
    - 提醒时间：<格式化时间>
@@ -38,13 +41,23 @@ description: 创建 macOS 后台定时提醒任务，在指定时间通过系统
 
 当电脑在提醒时间处于睡眠/锁屏状态时：
 
-1. **唤醒检测**：通过 LaunchAgent 在系统唤醒/登录时自动触发检查
+**macOS:**
+1. **唤醒检测**：通过 LaunchAgent 在系统唤醒/登录时自动触发检查（每分钟检查一次）
 2. **过期提醒确认**：弹出对话框 `[过期提醒] xxx`，提供两个选项：
    - **已确认**：删除任务，表示用户已知晓
    - **稍后（30分钟）**：推迟30分钟，下次唤醒或定时再次提醒
 3. **超时处理**：对话框5分钟后自动关闭，下次唤醒时再次提醒
 
+**Windows:**
+1. **解锁检测**：通过 Task Scheduler 在登录和工作站解锁时自动触发检查
+2. **过期提醒确认**：弹出消息框 `[过期提醒] xxx`，提供两个选项：
+   - **是**：删除任务，表示用户已知晓
+   - **否**：推迟30分钟，下次解锁时再次提醒
+3. **关闭处理**：关闭消息框会保持任务，下次解锁时再次提醒
+
 ## 脚本参考
+
+### macOS
 
 | 脚本 | 用途 |
 |------|------|
@@ -56,35 +69,71 @@ description: 创建 macOS 后台定时提醒任务，在指定时间通过系统
 | `scripts/wakeup_handler.sh` | 唤醒时执行，处理过期提醒确认（内部使用）|
 | `scripts/install_agent.sh` | 安装 LaunchAgent（内部使用）|
 
+### Windows
+
+| 脚本 | 用途 |
+|------|------|
+| `scripts/windows/create_reminder.ps1` | 创建提醒任务，自动安装 Task Scheduler（如未安装），返回 PID |
+| `scripts/windows/cancel_task.ps1 -Pid <pid>` | 取消指定任务 |
+| `scripts/windows/list_tasks.ps1` | 列出所有在途任务（跳过已过期的）|
+| `scripts/windows/list_tasks.ps1 -Expired` | 列出待确认的过期任务 |
+| `scripts/windows/cleanup_expired.ps1` | 标记过期任务，发送通知告知用户解锁时将弹出确认 |
+| `scripts/windows/wakeup_handler.ps1` | 解锁/登录时执行，处理过期提醒确认（内部使用）|
+| `scripts/windows/install_agent.ps1` | 安装 Task Scheduler（内部使用）|
+
 ## 使用示例
 
 **用户**: "5分钟后提醒我 API 限额重置"
 
 **处理**:
 ```bash
-# 1. 解析：当前时间 + 300秒
-target=$(($(date +%s) + 300))
+# 1. 检测平台并创建提醒
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS
+    target=$(($(date +%s) + 300))
+    pid=$(scripts/create_reminder.sh "API 限额重置" "您的 API 限额已重置" $target)
+else
+    # Windows (Git Bash/Cygwin)
+    target=$(($(date +%s) + 300))
+    pid=$(powershell.exe -ExecutionPolicy Bypass -File scripts/windows/create_reminder.ps1 -Title "API 限额重置" -Message "您的 API 限额已重置" -TargetEpoch $target)
+fi
 
-# 2. 创建任务（自动安装 LaunchAgent）
-pid=$(scripts/create_reminder.sh "API 限额重置" "您的 API 限额已重置" $target)
-
-# 3. 按模板返回结果
+# 2. 按模板返回结果
 ```
 
 **查看待确认的过期任务**:
 ```bash
+# macOS
 scripts/list_tasks.sh --expired
+
+# Windows (PowerShell)
+scripts/windows/list_tasks.ps1 -Expired
 ```
 
 ## 依赖
 
-- macOS `osascript` 用于显示对话框和通知
+### macOS
+- `osascript` 用于显示对话框和通知
 - `date` 命令用于时间计算
 - `launchctl` 用于 LaunchAgent 管理（自动处理）
 
+### Windows
+- PowerShell 5.0+ 或 PowerShell Core
+- Windows Forms (System.Windows.Forms) 用于显示对话框
+- Task Scheduler 服务用于唤醒检测（自动安装）
+
 ## 技术说明
 
+### macOS
 - **LaunchAgent**: `~/Library/LaunchAgents/com.local-link.remind-me.plist`
   - 在系统唤醒、登录、挂载磁盘时触发
+  - 每分钟检查一次过期任务
   - 自动加载，无需用户手动配置
 - **日志文件**: `/tmp/remind-me-skill.log` 和 `/tmp/remind-me-skill.error.log`
+
+### Windows
+- **Task Scheduler**: `RemindMe-Skill-Wakeup`
+  - 在登录和工作站解锁时触发
+  - 使用当前用户权限运行，确保安全
+  - 自动注册，无需用户手动配置
+- **任务文件位置**: `%USERPROFILE%\.config\remind-me-skill\tasks\`
