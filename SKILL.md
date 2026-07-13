@@ -1,5 +1,5 @@
 ---
-name: remind-me-skill
+name: remind-me
 description: 创建系统提醒，四种类型按场景分流。reminder=提醒事项 App（任务型、需勾选完成、留列表）；calendar=日历 App（一次性、未来某天、到点即过、事件自动归档）；stickies=桌面便签（常驻展示、富文本+图片）；break=后台定时弹窗强制打断（跨平台、支持睡眠唤醒补提醒）。支持 macOS/Windows/Linux。当用户需要设置定时提醒、倒计时、闹钟、日程事件、桌面便签，或"X 分钟/天/月后提醒我"、"回到某 session 继续"时使用。
 argument-hint: [--type reminder|calendar|stickies|break] <提醒内容> [at <时间>]
 disable-model-invocation: true
