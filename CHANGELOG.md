@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-14
+
 ### Changed
 
 - 按 `create-skill-project` 模板重组目录结构：将 `SKILL.md`、`references/`、`scripts/` 移入 `skills/remind-me/`，`assets/` 存放示例图片
 - 将 `references/` 重命名为 `reference/` 后恢复为 `references/`，以符合 Agent Skills 官方规范
+- 删除未被使用的 `systemd/` 模板
+- 修复 `Agents.md` 中失效的 `SKILL.md` 链接
+- 重写 `README.md`，对齐四种提醒类型与跨平台能力
 
 ## [0.1.0] - 2026-07-13
 
