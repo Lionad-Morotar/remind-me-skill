@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-07-14
+
+### Fixed
+
+- 修复 `SKILL.md` frontmatter 中 `argument-hint` 未加引号导致 YAML 解析失败，使 `npx skills add` 无法发现 skill 的问题
+
 ## [0.1.1] - 2026-07-14
 
 ### Changed
