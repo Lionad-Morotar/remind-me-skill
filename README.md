@@ -1,69 +1,71 @@
 ---
 title: remind-me-skill
-description: 闹钟；macOS 后台定时提醒技能，在指定时间通过系统通知打断用户。
+description: 创建系统提醒，支持 reminder / calendar / stickies / break 四种类型，跨 macOS / Windows / Linux。
 ---
 
-提醒技能。两种模式：
+# remind-me-skill
 
-* 中断型：macOS 后台定时提醒 remind-me-skill，在指定时间通过系统通知打断用户。如“明早提醒我签到”。
-* 记录型：记录到系统“提醒事项”。如“提醒我阅读这个文章”。
+创建系统提醒，按场景分流到四种类型：
 
-## 理念
+- `reminder`：写入系统「提醒事项」App，适合任务型、需勾选完成的待办。
+- `calendar`：写入系统「日历」App，适合一次性、到点即过的未来事件。
+- `stickies`：生成桌面便签，适合常驻展示的内容。
+- `break`：后台定时弹窗强制打断，支持睡眠/锁屏唤醒后补提醒。
 
-工作流中经常需要等待某个时间点（API 限额重置、会议开始、定时休息等），但不想一直盯着时间。这个 Skill 创建一个轻量级后台进程，到时间后通过 macOS 系统对话框强制提醒。
+支持 macOS、Windows、Linux 三平台。
 
-## 示例
-
-```
-用户: 报错了，设置提醒：{
-    "error": {
-      "message": "⚡ 勇士，您的今日冒险体力已耗尽！",
-      "details": {
-        "recovery_time": "2026-02-14T06:32:36+08:00",
-      }
-    },
-    "advice": "💡 小贴士：合理规划冒险路线，避免在Boss战前耗尽体力！"
-  }
-
-AI: 已在后台设置提醒任务：
-    - 提醒时间：2026-02-14 06:32:36
-    - 提醒内容：冒险体力已恢复！
-    
-    后台进程 PID: 37802
-    如果您想取消提醒，可以运行：kill 37802
-```
-
-> 💡 **无论扔什么**：冷却时间 / 会议 / 休息 / 烧水 / 外卖 / 任何时间相关的任务，AI 都能接！
-
-到时间后弹出系统对话框（强制打断，无法忽略）
-
-![dialog](./skills/remind-me/assets/example.png)
-
-## 安装和使用
+## 安装
 
 ```bash
 npx skills add -g Lionad-Morotar/remind-me-skill
 ```
 
-如果你的 IDE 不支持 SlashCommand，那么为了获得最可靠的结果，需要提示词前加上前缀，比如：
+如果你的 IDE 不支持 Slash Command，可以在提示词前加前缀以确保触发：
 
 ```plaintext
-使用 remind-me-skill 技能，10分钟后提醒我开会
+使用 remind-me 技能，10 分钟后提醒我开会
 ```
 
-## 核心功能
+## 使用
 
-- **后台提醒**：使用子 shell + sleep，不阻塞当前 AI 会话
-- **任务管理**：自动跟踪在途提醒，存储在 `~/.config/remind-me-skill/tasks/`
-- **过期清理**：启动时自动检测并提醒关机期间错过的任务
-- **灵活取消**：通过 PID 管理，支持随时取消
+### 提醒事项（reminder）
+
+适合需要勾选完成的任务。
+
+```plaintext
+/remind-me 提醒我下周三前提交报销单
+```
+
+### 日历事件（calendar）
+
+适合一次性、到点即过的事件。
+
+```plaintext
+/remind-me 明天下午 3 点复盘 --type calendar
+```
+
+### 桌面便签（stickies）
+
+适合常驻展示的内容。
+
+```plaintext
+/remind-me 便签：今日核心目标 --type stickies
+```
+
+### 强制打断（break）
+
+适合必须被打断的场景，到点弹系统对话框。
+
+```plaintext
+/remind-me 25 分钟后提醒我休息 --type break
+```
 
 ## 脚本工具
 
-Skill 提供以下脚本供手动管理：
+安装后脚本位于 `~/.claude/skills/remind-me/scripts/`，可手动管理在途任务：
 
 ```bash
-# 列出所有在途任务
+# 列出在途任务
 ~/.claude/skills/remind-me/scripts/list_tasks.sh
 
 # 取消指定任务
@@ -73,33 +75,26 @@ Skill 提供以下脚本供手动管理：
 ~/.claude/skills/remind-me/scripts/cleanup_expired.sh
 ```
 
-## 技术实现
-
-### 任务存储
-
-任务文件存储在 `~/.config/remind-me-skill/tasks/<timestamp>_<pid>.task`：
+## 项目结构
 
 ```
-TITLE=API 限额重置
-MESSAGE=您的 API 限额已重置
-CREATED_AT=1771021715
-TARGET_AT=1771021956
-PID=37802
+remind-me-skill/
+└── skills/
+    └── remind-me/
+        ├── SKILL.md          # Skill 主入口与路由
+        ├── references/       # 各类型详细参考
+        ├── scripts/          # 跨平台脚本
+        └── assets/           # 示例图片等资源
 ```
 
-### 后台进程
+## 支持平台
 
-```bash
-(sleep $wait_seconds && 
-  osascript -e "display dialog \"内容\" with title \"标题\" buttons {\"OK\"} default button 1 giving up after 60" &&
-  rm -f $task_file) &
-```
-
-### 过期任务处理
-
-系统关机时后台进程会被终止。重启后 Skill 自动检测 `TARGET_AT < 当前时间` 的任务，通过 `display notification` 提醒用户错过的任务。
+- **macOS**：Reminders.app / Calendar.app / Stickies.app / osascript 弹窗 / LaunchAgent
+- **Windows**：PowerShell / Windows Forms / Task Scheduler
+- **Linux**：systemd user timer / zenity / kdialog
 
 ## 依赖
 
-- macOS 10.10+ （使用 `osascript`）
-- Bash 4.0+
+- macOS：osascript、launchctl
+- Windows：PowerShell 5.0+
+- Linux：systemd、zenity 或 kdialog
