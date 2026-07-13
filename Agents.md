@@ -8,7 +8,7 @@ remind-me skill：创建系统提醒，支持 reminder（提醒事项 App）、c
 
 | 文档 | 说明 |
 | --- | --- |
-| [SKILL.md](./SKILL.md) | skill 主入口与路由说明 |
+| [SKILL.md](./skills/remind-me/SKILL.md) | skill 主入口与路由说明 |
 | [CHANGELOG.md](./CHANGELOG.md) | 版本变更日志 |
 | [README.md](./README.md) | 项目说明与使用示例 |
 | [STACK.md](./.planning/codebase/STACK.md) | 技术栈、开发命令、部署流程 |

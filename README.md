@@ -37,7 +37,7 @@ AI: 已在后台设置提醒任务：
 
 到时间后弹出系统对话框（强制打断，无法忽略）
 
-![dialog](./docs/example.png)
+![dialog](./skills/remind-me/assets/example.png)
 
 ## 安装和使用
 
@@ -64,13 +64,13 @@ Skill 提供以下脚本供手动管理：
 
 ```bash
 # 列出所有在途任务
-~/.agents/skills/remind-me-skill/scripts/list_tasks.sh
+~/.claude/skills/remind-me/scripts/list_tasks.sh
 
 # 取消指定任务
-~/.agents/skills/remind-me-skill/scripts/cancel_task.sh <PID>
+~/.claude/skills/remind-me/scripts/cancel_task.sh <PID>
 
 # 清理过期任务（自动执行）
-~/.agents/skills/remind-me-skill/scripts/cleanup_expired.sh
+~/.claude/skills/remind-me/scripts/cleanup_expired.sh
 ```
 
 ## 技术实现
